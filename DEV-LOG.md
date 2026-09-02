@@ -40,3 +40,17 @@ The laptop camera successfully works with Python.
 
 ### Next step
 Add pose detection so the program can recognise body movement.
+
+## 2 September 2026 — Performance Issue
+
+### Problem
+The pose detection worked, but the camera feed was very laggy.
+
+### Possible causes
+- Pose detection was being performed on every frame.
+- The pose model was using model complexity 1.
+- The camera was processing a relatively large image.
+- Debug messages were being printed continuously.
+
+### Next step
+Optimise the pose detection so the camera feed is smoother.
