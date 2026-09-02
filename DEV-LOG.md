@@ -20,3 +20,23 @@ I initially created the Git repository in the wrong directory on the school Wind
 
 ### Next step
 Get the laptop camera working with Python.
+
+
+## 2 September 2026 — Camera Test
+
+### What I did
+- Installed OpenCV using pip.
+- Created a Python program that accesses the laptop webcam.
+- Successfully displayed a live camera feed.
+
+### What I learnt
+- OpenCV can access hardware such as a webcam.
+- `cv2.VideoCapture(0)` connects to the default camera.
+- A loop can continuously read individual camera frames.
+- `cv2.imshow()` can display those frames.
+
+### Result
+The laptop camera successfully works with Python.
+
+### Next step
+Add pose detection so the program can recognise body movement.
