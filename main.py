@@ -1,37 +1,26 @@
 import cv2
 import mediapipe as mp
-import math
 
 
-mp_pose = mp.solutions.pose
+mp_hands = mp.solutions.hands
 
 camera = cv2.VideoCapture(0)
 
+# Controls how much the new position affects the smoothed position.
+# Higher = more responsive but more jitter.
+# Lower = smoother but more delayed.
+SMOOTHING = 0.4
 
-def calculate_angle(a, b, c):
-    """
-    Calculate the angle at point b using points a, b and c.
-    """
-
-    angle = math.degrees(
-        math.atan2(c[1] - b[1], c[0] - b[0])
-        - math.atan2(a[1] - b[1], a[0] - b[0])
-    )
-
-    angle = abs(angle)
-
-    if angle > 180:
-        angle = 360 - angle
-
-    return angle
+smoothed_x = None
+smoothed_y = None
 
 
-with mp_pose.Pose(
+with mp_hands.Hands(
     static_image_mode=False,
-    model_complexity=1,
+    max_num_hands=2,
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5
-) as pose:
+) as hands:
 
     while True:
         success, frame = camera.read()
@@ -42,76 +31,51 @@ with mp_pose.Pose(
 
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        results = pose.process(rgb_frame)
+        results = hands.process(rgb_frame)
 
-        if results.pose_landmarks:
-            landmarks = results.pose_landmarks.landmark
+        if results.multi_hand_landmarks:
 
-            # Left leg
-            left_hip = landmarks[mp_pose.PoseLandmark.LEFT_HIP]
-            left_knee = landmarks[mp_pose.PoseLandmark.LEFT_KNEE]
-            left_ankle = landmarks[mp_pose.PoseLandmark.LEFT_ANKLE]
+            hand = results.multi_hand_landmarks[0]
 
-            # Right leg
-            right_hip = landmarks[mp_pose.PoseLandmark.RIGHT_HIP]
-            right_knee = landmarks[mp_pose.PoseLandmark.RIGHT_KNEE]
-            right_ankle = landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE]
+            # MediaPipe landmark 8 = index finger tip
+            index_finger = hand.landmark[8]
 
-            # Convert landmarks into screen coordinates
-            def to_pixel(landmark):
-                x = int(landmark.x * frame.shape[1])
-                y = int(landmark.y * frame.shape[0])
-                return x, y
+            raw_x = index_finger.x
+            raw_y = index_finger.y
 
-            left_hip_pos = to_pixel(left_hip)
-            left_knee_pos = to_pixel(left_knee)
-            left_ankle_pos = to_pixel(left_ankle)
+            # Start the smoothed position at the first detected position
+            if smoothed_x is None:
+                smoothed_x = raw_x
+                smoothed_y = raw_y
+            else:
+                # Exponential smoothing
+                smoothed_x = (
+                    SMOOTHING * raw_x
+                    + (1 - SMOOTHING) * smoothed_x
+                )
 
-            right_hip_pos = to_pixel(right_hip)
-            right_knee_pos = to_pixel(right_knee)
-            right_ankle_pos = to_pixel(right_ankle)
+                smoothed_y = (
+                    SMOOTHING * raw_y
+                    + (1 - SMOOTHING) * smoothed_y
+                )
 
-            # Calculate knee angles
-            left_angle = calculate_angle(
-                left_hip_pos,
-                left_knee_pos,
-                left_ankle_pos
+            # Convert smoothed coordinates into pixels
+            x = int(smoothed_x * frame.shape[1])
+            y = int(smoothed_y * frame.shape[0])
+
+            # Draw the smoothed fingertip
+            cv2.circle(
+                frame,
+                (x, y),
+                12,
+                (0, 255, 0),
+                -1
             )
 
-            right_angle = calculate_angle(
-                right_hip_pos,
-                right_knee_pos,
-                right_ankle_pos
-            )
-
-            # Draw landmarks
-            points = [
-                left_hip_pos,
-                left_knee_pos,
-                left_ankle_pos,
-                right_hip_pos,
-                right_knee_pos,
-                right_ankle_pos
-            ]
-
-            for point in points:
-                cv2.circle(frame, point, 10, (0, 255, 0), -1)
-
-            # Draw left leg
-            cv2.line(frame, left_hip_pos, left_knee_pos, (0, 255, 0), 3)
-            cv2.line(frame, left_knee_pos, left_ankle_pos, (0, 255, 0), 3)
-
-            # Draw right leg
-            cv2.line(frame, right_hip_pos, right_knee_pos, (0, 255, 0), 3)
-            cv2.line(frame, right_knee_pos, right_ankle_pos, (0, 255, 0), 3)
-
-            # Draw hips
-            cv2.line(frame, left_hip_pos, right_hip_pos, (0, 255, 0), 3)
-
-            # Display knee angles
+            # Show the coordinates
             cv2.putText(
                 frame,
-                f"Left knee: {int(left_angle)}",
+                f"X: {x}  Y: {y}",
                 (20, 40),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
@@ -119,17 +83,7 @@ with mp_pose.Pose(
                 2
             )
 
-            cv2.putText(
-                frame,
-                f"Right knee: {int(right_angle)}",
-                (20, 75),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                (0, 255, 0),
-                2
-            )
-
-        cv2.imshow("Move2Unlock Squat Test", frame)
+        cv2.imshow("Move2Unlock Hand Test", frame)
 
         if cv2.waitKey(1) == ord("q"):
             break
