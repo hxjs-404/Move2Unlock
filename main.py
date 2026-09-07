@@ -7,6 +7,13 @@ mp_pose = mp.solutions.pose
 
 camera = cv2.VideoCapture(0)
 
+# Squat detection settings
+SQUAT_ANGLE = 100
+STANDING_ANGLE = 170
+
+rep_count = 0
+squat_state = "STANDING"
+
 
 def calculate_angle(a, b, c):
     """
@@ -24,6 +31,17 @@ def calculate_angle(a, b, c):
         angle = 360 - angle
 
     return angle
+
+
+def to_pixel(landmark, frame):
+    """
+    Convert MediaPipe's normalized coordinates into pixels.
+    """
+
+    x = int(landmark.x * frame.shape[1])
+    y = int(landmark.y * frame.shape[0])
+
+    return x, y
 
 
 with mp_pose.Pose(
@@ -47,29 +65,24 @@ with mp_pose.Pose(
         if results.pose_landmarks:
             landmarks = results.pose_landmarks.landmark
 
-            # Left leg
+            # Left side
             left_hip = landmarks[mp_pose.PoseLandmark.LEFT_HIP]
             left_knee = landmarks[mp_pose.PoseLandmark.LEFT_KNEE]
             left_ankle = landmarks[mp_pose.PoseLandmark.LEFT_ANKLE]
 
-            # Right leg
+            # Right side
             right_hip = landmarks[mp_pose.PoseLandmark.RIGHT_HIP]
             right_knee = landmarks[mp_pose.PoseLandmark.RIGHT_KNEE]
             right_ankle = landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE]
 
-            # Convert landmarks into screen coordinates
-            def to_pixel(landmark):
-                x = int(landmark.x * frame.shape[1])
-                y = int(landmark.y * frame.shape[0])
-                return x, y
+            # Convert landmarks to screen coordinates
+            left_hip_pos = to_pixel(left_hip, frame)
+            left_knee_pos = to_pixel(left_knee, frame)
+            left_ankle_pos = to_pixel(left_ankle, frame)
 
-            left_hip_pos = to_pixel(left_hip)
-            left_knee_pos = to_pixel(left_knee)
-            left_ankle_pos = to_pixel(left_ankle)
-
-            right_hip_pos = to_pixel(right_hip)
-            right_knee_pos = to_pixel(right_knee)
-            right_ankle_pos = to_pixel(right_ankle)
+            right_hip_pos = to_pixel(right_hip, frame)
+            right_knee_pos = to_pixel(right_knee, frame)
+            right_ankle_pos = to_pixel(right_ankle, frame)
 
             # Calculate knee angles
             left_angle = calculate_angle(
@@ -84,7 +97,10 @@ with mp_pose.Pose(
                 right_ankle_pos
             )
 
-            # Draw landmarks
+            # Average both knees
+            average_angle = (left_angle + right_angle) / 2
+
+            # Draw points
             points = [
                 left_hip_pos,
                 left_knee_pos,
@@ -95,25 +111,105 @@ with mp_pose.Pose(
             ]
 
             for point in points:
-                cv2.circle(frame, point, 10, (0, 255, 0), -1)
+                cv2.circle(
+                    frame,
+                    point,
+                    10,
+                    (0, 255, 0),
+                    -1
+                )
 
-            # Draw left leg
-            cv2.line(frame, left_hip_pos, left_knee_pos, (0, 255, 0), 3)
-            cv2.line(frame, left_knee_pos, left_ankle_pos, (0, 255, 0), 3)
+            # Draw legs
+            cv2.line(
+                frame,
+                left_hip_pos,
+                left_knee_pos,
+                (0, 255, 0),
+                3
+            )
 
-            # Draw right leg
-            cv2.line(frame, right_hip_pos, right_knee_pos, (0, 255, 0), 3)
-            cv2.line(frame, right_knee_pos, right_ankle_pos, (0, 255, 0), 3)
+            cv2.line(
+                frame,
+                left_knee_pos,
+                left_ankle_pos,
+                (0, 255, 0),
+                3
+            )
 
-            # Draw hips
-            cv2.line(frame, left_hip_pos, right_hip_pos, (0, 255, 0), 3)
+            cv2.line(
+                frame,
+                right_hip_pos,
+                right_knee_pos,
+                (0, 255, 0),
+                3
+            )
 
-            # Display knee angles
+            cv2.line(
+                frame,
+                right_knee_pos,
+                right_ankle_pos,
+                (0, 255, 0),
+                3
+            )
+
+            # Connect the hips
+            cv2.line(
+                frame,
+                left_hip_pos,
+                right_hip_pos,
+                (0, 255, 0),
+                3
+            )
+
+            # -------------------------
+            # Squat detection
+            # -------------------------
+
+            if squat_state == "STANDING":
+                if average_angle < SQUAT_ANGLE:
+                    squat_state = "SQUATTING"
+
+            elif squat_state == "SQUATTING":
+                if average_angle > STANDING_ANGLE:
+                    squat_state = "STANDING"
+                    rep_count += 1
+
+            # Display information
             cv2.putText(
                 frame,
-                f"Left knee: {int(left_angle)}",
+                f"Left angle: {int(left_angle)}",
                 (20, 40),
                 cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 0),
+                2
+            )
+
+            cv2.putText(
+                frame,
+                f"Right angle: {int(right_angle)}",
+                (20, 70),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 0),
+                2
+            )
+
+            cv2.putText(
+                frame,
+                f"Average: {int(average_angle)}",
+                (20, 100),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 0),
+                2
+            )
+
+            cv2.putText(
+                frame,
+                f"State: {squat_state}",
+                (20, 140),
+                cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
                 (0, 255, 0),
                 2
@@ -121,15 +217,15 @@ with mp_pose.Pose(
 
             cv2.putText(
                 frame,
-                f"Right knee: {int(right_angle)}",
-                (20, 75),
+                f"Reps: {rep_count}",
+                (20, 185),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
+                1.0,
                 (0, 255, 0),
-                2
+                3
             )
 
-        cv2.imshow("Move2Unlock Squat Test", frame)
+        cv2.imshow("Move2Unlock Squat Detector", frame)
 
         if cv2.waitKey(1) == ord("q"):
             break
