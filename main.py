@@ -9,7 +9,7 @@ camera = cv2.VideoCapture(0)
 
 # Squat detection settings
 SQUAT_ANGLE = 100
-STANDING_ANGLE = 160
+STANDING_ANGLE = 170
 
 rep_count = 0
 squat_state = "STANDING"
