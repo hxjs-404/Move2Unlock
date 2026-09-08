@@ -57,7 +57,15 @@ Optimise the pose detection so the camera feed is smoother.
 
 ## 4 September 2026 — Environment Setup
 
-* Added `requirements.txt` with pinned versions for Python 3.12, MediaPipe, OpenCV and NumPy.
-* Added `setup.sh` to automate environment setup.
-* Standardised the project on Python 3.12 and MediaPipe 0.10.21.
-* Verified the required packages work together.
+- Added `requirements.txt` with pinned versions for Python 3.12, MediaPipe, OpenCV and NumPy.
+- Added `setup.sh` to automate environment setup.
+- Standardised the project on Python 3.12 and MediaPipe 0.10.21.
+- Verified the required packages work together.
+
+## 7 September 2026 — Squat Logic Testing
+
+- Added simulated knee-angle testing without the camera. (Logic-Test)
+- Added standing/squatting states and rep counting. 
+- Added adjustable squat angle thresholds.
+- Added keyboard controls for testing the logic. (Logic-Test)
+- Separated squat detection logic from MediaPipe tracking.
