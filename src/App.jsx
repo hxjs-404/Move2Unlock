@@ -112,10 +112,8 @@ function App() {
       return {
         challengesCompleted:
           Number(parsed.challengesCompleted) || 0,
-
         totalReps:
           Number(parsed.totalReps) || 0,
-
         totalUnlockMinutes:
           Number(parsed.totalUnlockMinutes) || 0,
       }
@@ -130,8 +128,7 @@ function App() {
 
   const selectedExerciseData =
     EXERCISES.find(
-      (exercise) =>
-        exercise.id === selectedExercise
+      (exercise) => exercise.id === selectedExercise
     ) || EXERCISES[0]
 
   useEffect(() => {
@@ -166,7 +163,6 @@ function App() {
                 modelAssetPath:
                   "/models/pose_landmarker_lite.task",
               },
-
               runningMode: "VIDEO",
               numPoses: 1,
             }
@@ -186,7 +182,6 @@ function App() {
         )
 
         setPoseReady(false)
-
         setError(
           "Movement detection could not be loaded."
         )
@@ -212,9 +207,7 @@ function App() {
       !animationRef.current
     ) {
       animationRef.current =
-        requestAnimationFrame(
-          detectPose
-        )
+        requestAnimationFrame(detectPose)
     }
   }, [cameraOn, poseReady])
 
@@ -360,69 +353,105 @@ function App() {
     starJumpStateRef.current = "CLOSED"
   }
 
-function spinWheel() {
-  if (spinning) {
-    return
-  }
+  function spinWheel() {
+    if (spinning) {
+      return
+    }
 
-  const segmentAngle = 360 / EXERCISES.length
+    const segmentAngle =
+      360 / EXERCISES.length
 
-  // Randomly choose which exercise wins
-  const chosenIndex = Math.floor(
-    Math.random() * EXERCISES.length
-  )
+    const chosenIndex =
+      Math.floor(
+        Math.random() *
+          EXERCISES.length
+      )
 
-  /*
-   * Choose a random point INSIDE the selected segment.
-   * We stay 12° away from either edge so the pointer
-   * never lands awkwardly on a boundary.
-   */
-  const randomOffset =
-    12 +
-    Math.random() * (segmentAngle - 24)
+    const padding = 20
 
-  const targetAngle =
-    chosenIndex * segmentAngle + randomOffset
+    const randomAngle =
+      chosenIndex *
+        segmentAngle +
+      padding +
+      Math.random() *
+        (segmentAngle - padding * 2)
 
-  /*
-   * The pointer is at the top of the wheel.
-   *
-   * To place targetAngle under the pointer,
-   * the wheel needs to rotate by the opposite angle.
-   */
-  const currentRotation =
-    ((wheelRotation % 360) + 360) % 360
+    const targetRotation =
+      360 - randomAngle
 
-  const targetRotation =
-    (360 - targetAngle) % 360
+    const currentRotation =
+      ((wheelRotation % 360) + 360) %
+      360
 
-  let rotationNeeded =
-    targetRotation - currentRotation
+    const adjustment =
+      (targetRotation -
+        currentRotation +
+        360) %
+      360
 
-  if (rotationNeeded < 0) {
-    rotationNeeded += 360
-  }
+    const extraSpins =
+      6 +
+      Math.floor(
+        Math.random() * 3
+      )
 
-  // Random number of full spins
-  const extraSpins =
-    6 + Math.floor(Math.random() * 4)
+    const finalRotation =
+      wheelRotation +
+      extraSpins * 360 +
+      adjustment
 
-  const finalRotation =
-    wheelRotation +
-    extraSpins * 360 +
-    rotationNeeded
-
-  setSpinning(true)
-  setWheelRotation(finalRotation)
-
-  setTimeout(() => {
-    setSelectedExercise(
-      EXERCISES[chosenIndex].id
+    setSpinning(true)
+    setWheelRotation(
+      finalRotation
     )
 
-    setSpinning(false)
-  }, 4200)
-}
+    setTimeout(() => {
+      setSelectedExercise(
+        EXERCISES[chosenIndex].id
+      )
+
+      setSpinning(false)
+    }, 4200)
+  }
+
+  async function startCamera() {
+    try {
+      setError("")
+
+      if (!poseReady) {
+        setError(
+          "Movement detection is still loading."
+        )
+
+        return
+      }
+
+      const stream =
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        })
+
+      streamRef.current = stream
+
+      setReps(0)
+
+      resetExerciseStates()
+
+      setLocked(false)
+
+      setScreen("challenge")
+    } catch (err) {
+      console.error(
+        "Camera error:",
+        err
+      )
+
+      setError(
+        "Camera access was denied or unavailable."
+      )
+    }
+  }
 
   function stopCamera() {
     if (animationRef.current) {
@@ -642,17 +671,12 @@ function spinWheel() {
     }
   }
 
-  function detectExercise(
-    landmarks
-  ) {
+  function detectExercise(landmarks) {
     if (
       selectedExercise ===
       "squats"
     ) {
-      detectSquat(
-        landmarks
-      )
-
+      detectSquat(landmarks)
       return
     }
 
@@ -660,10 +684,7 @@ function spinWheel() {
       selectedExercise ===
       "pushups"
     ) {
-      detectPushup(
-        landmarks
-      )
-
+      detectPushup(landmarks)
       return
     }
 
@@ -671,9 +692,7 @@ function spinWheel() {
       selectedExercise ===
       "starjumps"
     ) {
-      detectStarJump(
-        landmarks
-      )
+      detectStarJump(landmarks)
     }
   }
 
@@ -976,7 +995,6 @@ function spinWheel() {
 
           <div className="status-pill unlocked">
             <span className="status-dot active" />
-
             Unlocked
           </div>
         </header>
@@ -993,9 +1011,7 @@ function spinWheel() {
 
             <h1>
               You're{" "}
-              <span>
-                unlocked.
-              </span>
+              <span>unlocked.</span>
             </h1>
 
             <p className="unlock-subtitle">
@@ -1004,9 +1020,7 @@ function spinWheel() {
             </p>
 
             <div className="unlock-timer-card">
-              <p>
-                TIME REMAINING
-              </p>
+              <p>TIME REMAINING</p>
 
               <strong>
                 {formatTime(
@@ -1046,7 +1060,6 @@ function spinWheel() {
 
           <div className="status-pill locked">
             <span className="status-dot active" />
-
             Locked
           </div>
         </header>
@@ -1063,9 +1076,7 @@ function spinWheel() {
 
             <h1>
               Time to{" "}
-              <span>
-                move.
-              </span>
+              <span>move.</span>
             </h1>
 
             <p className="lock-subtitle">
@@ -1076,9 +1087,7 @@ function spinWheel() {
             </p>
 
             <div className="challenge-summary">
-              <p>
-                TO UNLOCK
-              </p>
+              <p>TO UNLOCK</p>
 
               <strong>
                 10{" "}
@@ -1086,8 +1095,8 @@ function spinWheel() {
               </strong>
 
               <span>
-                Complete the challenge
-                to continue.
+                Complete the challenge to
+                continue.
               </span>
             </div>
 
@@ -1113,8 +1122,8 @@ function spinWheel() {
 
             {!poseReady && (
               <p className="detection-status">
-                Movement detection is
-                still loading.
+                Movement detection is still
+                loading.
               </p>
             )}
           </div>
@@ -1142,7 +1151,6 @@ function spinWheel() {
 
           <div className="status-pill">
             <span className="status-dot" />
-
             Ready
           </div>
         </header>
@@ -1165,8 +1173,7 @@ function spinWheel() {
             </h1>
 
             <p className="subtitle">
-              Configure how Move2Unlock
-              works.
+              Configure how Move2Unlock works.
             </p>
           </div>
 
@@ -1178,9 +1185,8 @@ function spinWheel() {
                 </h2>
 
                 <p>
-                  Set how long you can
-                  use a selected app
-                  before a challenge
+                  Set how long you can use
+                  the app before a challenge
                   begins.
                 </p>
               </div>
@@ -1191,20 +1197,13 @@ function spinWheel() {
                     type="text"
                     inputMode="numeric"
                     value={screenLimit}
-                    onChange={(
-                      event
-                    ) => {
+                    onChange={(event) => {
                       setScreenLimit(
                         event.target.value
                       )
 
-                      setSettingsError(
-                        ""
-                      )
-
-                      setSettingsSaved(
-                        false
-                      )
+                      setSettingsError("")
+                      setSettingsSaved(false)
                     }}
                     placeholder="60"
                     aria-label="Screen time limit in minutes"
@@ -1246,8 +1245,8 @@ function spinWheel() {
 
                 <p>
                   How long browsing stays
-                  unlocked after
-                  completing a challenge.
+                  unlocked after completing
+                  a challenge.
                 </p>
               </div>
 
@@ -1259,19 +1258,18 @@ function spinWheel() {
             <div className="setting-row">
               <div className="setting-info">
                 <h2>
-                  Challenge Statistics
+                  Selected Exercise
                 </h2>
 
                 <p>
-                  Your completed
-                  challenges are saved
-                  locally on this device.
+                  The exercise chosen by
+                  the challenge wheel.
                 </p>
               </div>
 
               <div className="setting-value">
                 {
-                  statistics.challengesCompleted
+                  selectedExerciseData.name
                 }
               </div>
             </div>
@@ -1279,18 +1277,18 @@ function spinWheel() {
             <div className="setting-row">
               <div className="setting-info">
                 <h2>
-                  Current Exercise
+                  Completed Challenges
                 </h2>
 
                 <p>
-                  The exercise selected
-                  by the challenge wheel.
+                  Total challenges completed
+                  on this device.
                 </p>
               </div>
 
               <div className="setting-value">
                 {
-                  selectedExerciseData.name
+                  statistics.challengesCompleted
                 }
               </div>
             </div>
@@ -1387,9 +1385,8 @@ function spinWheel() {
                     </p>
 
                     <span>
-                      Your movement will
-                      be detected
-                      automatically.
+                      Your movement will be
+                      detected automatically.
                     </span>
                   </div>
                 )}
@@ -1467,7 +1464,6 @@ function spinWheel() {
 
         <div className="status-pill">
           <span className="status-dot" />
-
           Ready
         </div>
       </header>
@@ -1521,14 +1517,12 @@ function spinWheel() {
               </div>
 
               <div
-                className={`exercise-wheel ${
-                  spinning
-                    ? "spinning"
-                    : ""
-                }`}
+                className="exercise-wheel"
                 style={{
-                  transform: `rotate(${wheelRotation}deg)`,
-                  "--wheel-rotation": `${wheelRotation}deg`,
+                  transform:
+                    `rotate(${wheelRotation}deg)`,
+                  "--wheel-rotation":
+                    `${wheelRotation}deg`,
                 }}
               >
                 <div className="wheel-center">
@@ -1669,9 +1663,7 @@ function spinWheel() {
               </span>
 
               <strong>
-                {
-                  statistics.totalReps
-                }
+                {statistics.totalReps}
               </strong>
             </div>
 
